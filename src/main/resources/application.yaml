@@ -21,3 +21,4 @@ server:
   error:
     include-message: always
     include-binding-errors: on-param
+file-root-path: /arquivosDir/
