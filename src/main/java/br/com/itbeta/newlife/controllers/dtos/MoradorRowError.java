@@ -6,5 +6,5 @@ import lombok.Builder;
 public class MoradorRowError {
 
     @Builder.Default
-    public String errorMsg ="";
+    public String msg ="";
 }

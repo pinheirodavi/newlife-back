@@ -1,6 +1,7 @@
 package br.com.itbeta.newlife.services;
 
 import br.com.itbeta.newlife.controllers.dtos.MoradorRow;
+import br.com.itbeta.newlife.exception.SheetImportException;
 import br.com.itbeta.newlife.models.Apartamento;
 import br.com.itbeta.newlife.models.Morador;
 import br.com.itbeta.newlife.repositories.ApartamentoRepository;
@@ -31,9 +32,10 @@ public class ImportService {
     ) throws IOException,
             SAXException,
             OpenXML4JException {
-        List<MoradorRow> moradorRows = this.parseSheet(inputStream);
 
+        List<MoradorRow> moradorRows = this.parseSheet(inputStream);
         this.registerMoradores(moradorRows);
+
     }
 
     public List<MoradorRow> parseSheet(InputStream inputStream)
@@ -45,7 +47,8 @@ public class ImportService {
             ArrayList<MoradorRow> rows = new ArrayList<>();
             MoradorRow moradorRow = MoradorRow
                     .builder()
-                    .apartamento(this.getApto(row[0]))
+                    .rowNumber(rowInfo.rowNumber)
+                    .apartamento(this.getApto(row[0], rowInfo.rowNumber))
                     .nome(row[1])
                     .rg(row[2])
                     .cpf(row[3])
@@ -59,22 +62,23 @@ public class ImportService {
             rows.add(moradorRow);
             return rows;
         });
+//
+//        Map<Boolean, List<MoradorRow>> rows = sheetParser
+//                .process()
+//                .flatMap(Collection::stream)
+//                .collect(Collectors.groupingBy(row -> row.hasError));
+//        List<MoradorRow> wrongRows = rows.get(true);
+//        List<MoradorRow> rightRows = rows.get(false);
+//        return rightRows;
 
-        Map<Boolean, List<MoradorRow>> rows = sheetParser
-                .process()
-                .flatMap(Collection::stream)
-                .collect(Collectors.groupingBy(row -> row.hasError));
-        List<MoradorRow> wrongRows = rows.get(true);
-        List<MoradorRow> rightRows = rows.get(false);
-        return rightRows;
+        List<MoradorRow> rows = sheetParser.process().flatMap(Collection::stream).collect(Collectors.toList());
+        return rows;
     }
 
     public void registerMoradores(List<MoradorRow> moradorRows) {
         int moradorSize = moradorRows.size();
 
         ArrayList<Morador> allMoradores = new ArrayList<>(moradorSize);
-
-        long count = 0;
 
         for (MoradorRow moradorRow : moradorRows) {
             Morador morador = Morador.builder()
@@ -90,21 +94,22 @@ public class ImportService {
                     .obs(moradorRow.obs)
                     .build();
             allMoradores.add(morador);
-            count++;
-            System.out.println(count);
         }
-        System.out.println("TAMANHO: "+allMoradores.size());
-        List<Morador> moradores = this.moradorRepository.saveAll(allMoradores);
+        this.moradorRepository.saveAll(allMoradores);
     }
 
-    public Apartamento getApto(String numeroApto) {
+    public Apartamento getApto(String numeroApto, int rowNumber) {
         for (Apartamento apartamento : this.apartamentoList) {
-            if (numeroApto != null)
+            if (numeroApto != null) {
                 if (apartamento.getNumApto() == Long.parseLong(numeroApto)) {
                     return apartamento;
                 }
+            } else {
+                throw new SheetImportException("O campo Apartamento deve ser preenchido! Falha na linha: " + (rowNumber + 1));
+            }
         }
-        return null;
+
+        throw new SheetImportException("O apartamento não existe! Falha na linha: " + (rowNumber + 1));
     }
 
 }

@@ -91,11 +91,7 @@ public class MoradorService {
 
     public void importMorador(MultipartFile file) throws IOException, NoSuchAlgorithmException, ParserConfigurationException,
             OpenXML4JException, SAXException {
-        Path filepath = this.fileService.save(file,"");
-        try{
-            this.importService.importSheet(file.getInputStream());
-        }catch(Exception e){
-            throw e;
-        }
+//        Path filepath = this.fileService.save(file,"");
+        this.importService.importSheet(file.getInputStream());
     }
 }

@@ -2,6 +2,7 @@ package br.com.itbeta.newlife.controllers;
 
 import br.com.itbeta.newlife.controllers.dtos.MoradorDTO;
 import br.com.itbeta.newlife.controllers.form.MoradorForm;
+import br.com.itbeta.newlife.exception.SheetImportException;
 import br.com.itbeta.newlife.repositories.projections.MoradorDetails;
 import br.com.itbeta.newlife.services.MoradorService;
 import lombok.AllArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.xml.sax.SAXException;
 
 import javax.transaction.Transactional;
@@ -76,16 +78,19 @@ public class MoradorController {
     }
 
     @PostMapping("/import")
-    public ResponseEntity<?> importMorador(@RequestPart(value = "file", required = true) MultipartFile file,
-                                           @RequestHeader HttpHeaders headers
-    )throws IOException,
+    public ResponseEntity<?> importMorador(@RequestPart(value = "file") MultipartFile file) throws IOException,
             NoSuchAlgorithmException,
             ParserConfigurationException,
             SAXException,
-            OpenXML4JException,
-            URISyntaxException
-    {
-        this.service.importMorador(file);
+            OpenXML4JException {
+        try {
+            this.service.importMorador(file);
+        } catch (SheetImportException e) {
+            if (e.getMessage().equals("O campo apartamento é inválido"))
+                throw new ResponseStatusException(HttpStatus.PRECONDITION_REQUIRED, e.getMessage());
+            System.out.println(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 }
